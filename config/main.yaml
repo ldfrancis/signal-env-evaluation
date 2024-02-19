@@ -1,0 +1,13 @@
+agent:
+  name: dqn
+
+env:
+  state_rep: vehicle_count
+  action_choice: phase
+  reward_function: pressure
+
+exp:
+  train: True
+  evaluate: True
+  test: True
+  
