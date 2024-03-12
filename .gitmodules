@@ -1,5 +1,5 @@
 [submodule "LibSignal"]
 	path = LibSignal
 	url = https://github.com/ldfrancis/LibSignal.git
-[submodule "sumo_rl"]
-	path = sumo_rl
+[submodule "sumorl"]
+	path = sumorl
