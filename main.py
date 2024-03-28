@@ -1,57 +1,100 @@
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from run import Runner
-from common.registry import Registry
-from argparse import Namespace
-import wandb
+from environment import SignalEnvironment
+from evaluator import Evaluator
+from observations import get_observation_class
+import reward_functions
+from agents import get_agent_class
+from trainer import Trainer
 import os
+from plot_demand import demand
 
-
-# parser = argparse.ArgumentParser(description='Run Experiment')
-# parser.add_argument('--thread_num', type=int, default=4, help='number of threads')  # used in cityflow
-# parser.add_argument('--ngpu', type=str, default="0", help='gpu to be used')  # choose gpu card
-# parser.add_argument('--prefix', type=str, default='test', help="the number of prefix in this running process")
-# parser.add_argument('--seed', type=int, default=None, help="seed for pytorch backend")
-# parser.add_argument('--debug', type=bool, default=True)
-# parser.add_argument('--interface', type=str, default="libsumo", choices=['libsumo','traci'], help="interface type") # libsumo(fast) or traci(slow)
-# parser.add_argument('--delay_type', type=str, default="apx", choices=['apx','real'], help="method of calculating delay") # apx(approximate) or real
-
-# parser.add_argument('-t', '--task', type=str, default="tsc", help="task type to run")
-# parser.add_argument('-a', '--agent', type=str, default="dqn", help="agent type of agents in RL environment")
-# parser.add_argument('-w', '--world', type=str, default="cityflow", choices=['cityflow','sumo'], help="simulator type")
-# parser.add_argument('-n', '--network', type=str, default="cityflow1x1", help="network name")
-# parser.add_argument('-d', '--dataset', type=str, default='onfly', help='type of dataset in training process')
-
+hydra_run = 0
 
 @hydra.main(version_base=None, config_path="config", config_name="main")
 def main(cfg : DictConfig) -> None:
+    global hydra_run
+
     print(OmegaConf.to_yaml(cfg))
-    if not cfg.exp.name:
+    if not cfg.experiment.name:
         print("Error! Please specify an experiment name. Set exp.name")
         return
-    runner = Runner(Namespace(
-        **{
-            "thread_num": 4,
-            "ngpu": 0,
-            "prefix": cfg.exp.name,
-            "seed": cfg.exp.seed,
-            "debug": True,
-            "interface": cfg.exp.interface,
-            "delay_type": "apx",
-            "task":"tsc",
-            "agent":cfg.agent.name,
-            "world":"sumo",
-            "network":cfg.env.network,
-            "dataset": "onfly"
-        }
-    ))
     
-    if cfg.exp.use_wandb:
-        wandb.login(key=os.environ["WANDBKEY"])
-        wandb.init(name=f"{cfg.wandb.name}-{cfg.agent.name}-{cfg.exp.name}", reinit = True, project = cfg.wandb.project, entity = cfg.wandb.entity, config = dict(cfg))
+    try:
+        cfg.experiment.net_demand
+        demand(cfg.road_network.name, cfg.road_network.route_file, cfg.road_network.begin_time, cfg.road_network.num_seconds)
+        return
+    except:
+        pass
 
-    runner.run()
+    # if cfg.experiment.hpo:
+        
 
+    
+    # environment
+    env = SignalEnvironment(
+        net_file=cfg.road_network.net_file,
+        route_file=cfg.road_network.route_file,
+        use_gui=cfg.environment.use_gui,
+        begin_time=cfg.road_network.begin_time,
+        num_seconds=cfg.road_network.num_seconds,
+        delta_time=cfg.environment.delta_time,
+        yellow_time=cfg.environment.yellow_time,
+        min_green=cfg.environment.min_green,
+        sumo_warnings=False,
+        sumo_seed=cfg.environment.sumo_seed,
+        observation_class = get_observation_class(cfg.environment.observation),
+        reward_fn=getattr(reward_functions, f"{cfg.environment.reward_fn}_reward")
+    )
 
-if __name__ == "__main__":
+    # agents
+    agents = {}
+    for ts_id in env.ts_ids:
+        Agent_cls = get_agent_class(cfg.agent.name)
+        agent_cfg = {}
+        agent_cfg.update(
+            {
+                **cfg.agent,
+                **cfg.trainer,
+                "delta_time": cfg.environment.delta_time,
+                "observation_space": env.observation_spaces(ts_id),
+                "action_space": env.action_spaces(ts_id),
+                "steps_per_episode": cfg.road_network.num_seconds
+            }
+        )
+        agents[ts_id] = Agent_cls(agent_cfg)
+
+    # trainer
+    if cfg.experiment.train:
+        for run in range(cfg.experiment.runs):
+            log_file = ""
+            log_dir = f"logs/{cfg.experiment.name}/{cfg.road_network.name}-{cfg.environment.observation}-{cfg.environment.reward_fn}-{cfg.agent.name}/{hydra_run}"
+            os.makedirs(log_dir, exist_ok=True)
+            if cfg.experiment.should_log:
+                with open(log_dir+"/config.yaml", "w+") as f:
+                    f.write(str(OmegaConf.to_yaml(cfg)))
+                log_file = log_dir+f"/{run}.csv"
+            for agent in agents.values():
+                agent.reset()
+            env.reset()
+            trainer = Trainer(agents, env, ["average_waiting_time", "average_travel_time", "average_delay", "average_queue_length", "throughput"], log_file=log_file)
+            trainer(cfg.trainer.episodes)
+
+            os.makedirs(log_dir+"/models", exist_ok=True)
+            trainer.save_agents(log_dir+"/models")
+            env.close()
+    else:
+        load_dir = cfg.experiment.load_dir
+        evaluator = Evaluator(agents, env)
+        evaluator.load_agents(load_dir)
+        evaluator()
+
+    hydra_run += 1
+
+    
+
+    
+    
+
+if __name__=="__main__":
     main()

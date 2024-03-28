@@ -1,0 +1,8 @@
+name: dqn
+buffer_size: 5000
+target_update: 100
+max_epsilon: 0.1
+min_epsilon: 0.01
+epsilon_decay: 0.995
+learning_start: 1000
+gamma: 0.99

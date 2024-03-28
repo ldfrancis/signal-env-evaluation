@@ -1,0 +1,4 @@
+- agent.target_update_frequency=10
+- trainer.learning_rate=0.01
+- agent.buffer_size=1000
+- agent.learning_starts=360

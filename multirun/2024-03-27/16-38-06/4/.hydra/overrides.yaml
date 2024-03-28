@@ -1,0 +1,5 @@
+- trainer.learning_rate=0.01
+- agent.min_epsilon=0
+- agent.exploration_fraction=0.5
+- agent.tau=0.5
+- agent.target_update_frequency=1

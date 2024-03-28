@@ -1,0 +1,5 @@
+name: grid4x4
+net_file: sumorl/nets/RESCO/grid4x4/grid4x4.net.xml
+route_file: sumorl/nets/RESCO/grid4x4/grid4x4_1.rou.xml
+begin_time: 0
+num_seconds: 3600

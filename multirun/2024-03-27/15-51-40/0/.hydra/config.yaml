@@ -1,0 +1,38 @@
+agent:
+  name: dqn
+  buffer_size: 1000
+  gamma: 0.99
+  tau: 1.0
+  target_update_frequency: 10
+  start_epsilon: 1.0
+  min_epsilon: 0.01
+  exploration_fraction: 0.5
+  learning_starts: 360
+  train_frequency: 1
+  loss_agg_window: 10
+road_network:
+  name: cologne1
+  net_file: sumorl/nets/RESCO/cologne1/cologne1.net.xml
+  route_file: sumorl/nets/RESCO/cologne1/cologne1.rou.xml
+  begin_time: 25200
+  num_seconds: 3600
+trainer:
+  episodes: 200
+  batch_size: 128
+  learning_rate: 0.01
+environment:
+  use_gui: false
+  delta_time: 10
+  yellow_time: 4
+  min_green: 10
+  sumo_seed: 0
+  observation: lane_vehicle_count
+  reward_fn: queue_length
+experiment:
+  name: exp1
+  seed: 1
+  torch_deterministic: true
+  train: true
+  runs: 5
+  should_log: true
+  load_dir: ''
