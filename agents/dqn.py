@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 import random
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class DQN:
     cfg = {
@@ -41,12 +42,12 @@ class DQN:
         
         with torch.no_grad():
             if isinstance(obs, dict):
-                obs = {k:torch.tensor(v, dtype=torch.float32).unsqueeze(0) for k,v in obs.items()}
+                obs = {k:torch.tensor(v, dtype=torch.float32).unsqueeze(0).to(device) for k,v in obs.items()}
             else:
-                obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
+                obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(device)
             a_values = self.qnet(obs)
             action = torch.argmax(a_values, dim=-1).item()
-            self.transition += [obs, action]
+            self.transition += [obs.cpu(), action]
             return action
         
     def observe(self, obs, rew, done):
@@ -112,6 +113,8 @@ class DQN:
         self.target_qnet = QNetwork(self.cfg["observation_space"],self.cfg["action_space"])
         self.update_target_qnet()
         self.target_qnet.eval()
+        self.qnet.to(device)
+        self.target_qnet.to(device)
         self.optimizer = torch.optim.Adam(self.qnet.parameters(), lr=self.cfg["learning_rate"])
 
         self.buffer = Buffer(
@@ -221,24 +224,24 @@ class Buffer:
     def sample_batch(self, batch_size):
         idxs = np.random.choice(self.size, batch_size, replace=False)
 
-        obs = torch.tensor(self.obs[idxs], dtype=torch.float32)
-        next_obs = torch.tensor(self.next_obs[idxs], dtype=torch.float32)
+        obs = torch.tensor(self.obs[idxs], dtype=torch.float32).to(device)
+        next_obs = torch.tensor(self.next_obs[idxs], dtype=torch.float32).to(device)
         if isinstance(self._obs_space, dict):
             obs = {
-                "obs":obs,
-                "phase":torch.tensor(self.phases[idxs], dtype=torch.float32)
+                "obs":obs.to(device),
+                "phase":torch.tensor(self.phases[idxs], dtype=torch.float32).to(device)
             }
             next_obs = {
                 "obs":next_obs,
-                "phase":torch.tensor(self.next_phases[idxs], dtype=torch.float32),   
+                "phase":torch.tensor(self.next_phases[idxs], dtype=torch.float32).to(device),   
             }
 
         return dict(
             obs = obs,
-            actions = torch.tensor(self.actions[idxs], dtype=torch.long),
-            rewards = torch.tensor(self.rewards[idxs], dtype=torch.float32),
+            actions = torch.tensor(self.actions[idxs], dtype=torch.long).to(device),
+            rewards = torch.tensor(self.rewards[idxs], dtype=torch.float32).to(device),
             next_obs = next_obs,
-            dones = torch.tensor(self.dones[idxs], dtype=torch.float32),
+            dones = torch.tensor(self.dones[idxs], dtype=torch.float32).to(device),
         )
 
     def can_sample(self, batch_size):

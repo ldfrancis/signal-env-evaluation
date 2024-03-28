@@ -23,7 +23,7 @@ def demand(name, rou_file, begin_time, num_seconds):
         for k,v in result.items():
             results[k-1] = v
 
-        plt.figure(figsize=)
+        plt.figure(figsize=(12,10))
         plt.plot(range(1, num_seconds+1), results)
         plt.ylabel("Number of vehicles")
         plt.xlabel("Time (seconds)")
