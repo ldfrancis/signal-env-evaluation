@@ -85,9 +85,9 @@ def main(cfg : DictConfig) -> None:
             env.close()
     else:
         load_dir = cfg.experiment.load_dir
-        evaluator = Evaluator(agents, env)
+        evaluator = Evaluator(agents, env,["average_waiting_time", "average_travel_time", "average_delay", "average_queue_length", "throughput"])
         evaluator.load_agents(load_dir)
-        evaluator()
+        print(evaluator())
 
     hydra_run += 1
 
