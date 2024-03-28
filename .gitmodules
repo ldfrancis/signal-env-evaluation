@@ -1,5 +1,3 @@
-[submodule "LibSignal"]
-	path = LibSignal
-	url = https://github.com/ldfrancis/LibSignal.git
 [submodule "sumorl"]
 	path = sumorl
+	url = https://github.com/LucasAlegre/sumo-rl.git
