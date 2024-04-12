@@ -1,0 +1,5 @@
+name: cologne3
+net_file: sumorl/nets/RESCO/cologne3/cologne3.net.xml
+route_file: sumorl/nets/RESCO/cologne3/cologne3.rou.xml
+begin_time: 25200
+num_seconds: 3600

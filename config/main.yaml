@@ -13,11 +13,11 @@ environment:
   yellow_time: 4
   min_green: 10
   sumo_seed: 0
-  observation: lane_vehicle_count # possible values: lane_vehicle_count, lane_waiting_time, and image_like_vehicle_info
-  reward_fn: queue_length # possible values: pressure, queue_length, and diff_queue_length
+  observation: image_like_vehicle_info # possible values: lane_vehicle_count, lane_waiting_time, and image_like_vehicle_info
+  reward_fn: pressure # possible values: pressure, queue_length, and diff_queue_length
 
 experiment:
-  name: exp1
+  name: trial
   seed: 1
   torch_deterministic: True
   train: True

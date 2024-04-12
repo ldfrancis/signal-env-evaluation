@@ -170,7 +170,7 @@ class Critic(torch.nn.Module):
         in_features = (
             np.prod(observation_space.shape) 
             if not isinstance(observation_space, dict) else 
-            np.prod(observation_space["obs"].shape) + np.prod(observation_space["phase"])
+            np.prod(observation_space["obs"].shape) + observation_space["phase"].shape[0]
         )
         self.encode = torch.nn.Sequential(
             torch.nn.Linear(in_features, 64),
@@ -181,10 +181,10 @@ class Critic(torch.nn.Module):
         )
     def forward(self, obs):
         in_features = (
-            obs if not isinstance(obs, dict) else (
-                torch.cat([obs["obs"], obs["phase"]], dim=1)
+            obs if not isinstance(obs, dict) else 
+                torch.cat([torch.nn.Flatten()(obs["obs"]), obs["phase"]], dim=1)
             )
-        )
+        
         return self.encode(in_features)
     
 
@@ -195,7 +195,7 @@ class Actor(torch.nn.Module):
         in_features = (
             np.prod(observation_space.shape) 
             if not isinstance(observation_space, dict) else 
-            np.prod(observation_space["obs"].shape) + np.prod(observation_space["phase"])
+            np.prod(observation_space["obs"].shape) + observation_space["phase"].shape[0]
         )
         self.encode = torch.nn.Sequential(
             torch.nn.Linear(in_features, 64),
@@ -208,7 +208,7 @@ class Actor(torch.nn.Module):
     def forward(self, obs):
         in_features = (
             obs if not isinstance(obs, dict) else (
-                torch.cat([obs["obs"], obs["phase"]], dim=1)
+                torch.cat([torch.nn.Flatten()(obs["obs"]), obs["phase"]], dim=1)
             )
         )
         return self.encode(in_features)

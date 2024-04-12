@@ -4,7 +4,8 @@ import torch.nn.functional as F
 
 import random
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu" if torch.cuda.is_available() else "cpu"
+print(f"Using device: {device}")
 
 class DQN:
     cfg = {
@@ -24,6 +25,8 @@ class DQN:
     def __init__(self, dqn_config) -> None:
         self.cfg = dqn_config
         self.reset()
+        self.num_updates = 0
+        self.num_steps = 0
 
     def train(self):
         self._mode = "train"
@@ -42,12 +45,12 @@ class DQN:
         
         with torch.no_grad():
             if isinstance(obs, dict):
-                obs = {k:torch.tensor(v, dtype=torch.float32).unsqueeze(0).to(device) for k,v in obs.items()}
+                a_values = self.qnet({k:torch.tensor(v, dtype=torch.float32).unsqueeze(0).to(device) for k,v in obs.items()})
             else:
-                obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(device)
-            a_values = self.qnet(obs)
+                a_values = self.qnet(torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(device))
+            # a_values = self.qnet(obs)
             action = torch.argmax(a_values, dim=-1).item()
-            self.transition += [obs.cpu(), action]
+            self.transition += [obs, action]
             return action
         
     def observe(self, obs, rew, done):
@@ -61,6 +64,7 @@ class DQN:
     def update(self, step=0):
         assert self._mode == "train"
         self._epsilon = self._epsilon_schedule(step)
+        self.num_steps += 1
 
         if not self.buffer.can_sample(self.cfg["batch_size"]):
             return
@@ -80,12 +84,13 @@ class DQN:
         self.stats["qloss"] = np.mean(self.qlosses)
         self.stats["epsilon"] = self._epsilon
         
-        if step > self.cfg["learning_starts"]:
+        if self.num_steps > self.cfg["learning_starts"] and self.num_steps % self.cfg["train_frequency"] == 0:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            self.num_updates += 1
 
-            if step % self.cfg["target_update_frequency"] == 0:
+            if self.num_updates % self.cfg["target_update_frequency"] == 0:
                 self.update_target_qnet()
             
 
@@ -154,16 +159,20 @@ class QNetwork(torch.nn.Module):
             )
         else:
             self.layers1 = torch.nn.Sequential(
-                torch.nn.Conv2d(3, 16, 3, 1, 1),
-                torch.nn.ReLU(),
-                torch.nn.Conv2d(3, 16, 3, 1, 1),
-                torch.nn.ReLU(),
+
+                # torch.nn.Conv2d(3, 16, 3, 1, 1),
+                # torch.nn.ReLU(),
+                # torch.nn.Conv2d(3, 16, 3, 1, 1),
+                # torch.nn.ReLU(),
+                # torch.nn.Flatten(),
+                # torch.nn.Linear(np.prod(obs_space["obs"].shape), 20),
+                # torch.nn.ReLU(),
+                # torch.nn.Linear(20, 20),
+                # torch.nn.ReLU(),
+                # torch.nn.Linear(20, 20),
+                # torch.nn.ReLU(),
                 torch.nn.Flatten(),
-                torch.nn.Linear(np.prod(obs_space["obs"].shape), 20),
-                torch.nn.ReLU(),
-                torch.nn.Linear(20, 20),
-                torch.nn.ReLU(),
-                torch.nn.Linear(20, 20),
+                torch.nn.Linear(int(np.prod(obs_space["obs"].shape)), 20),
                 torch.nn.ReLU(),
             )
             self.layers2 = torch.nn.Sequential(
@@ -174,7 +183,7 @@ class QNetwork(torch.nn.Module):
 
     def forward(self, obs):
         if isinstance(obs, dict):
-            x1 = self.layers1(obs["obs"])
+            x1 = self.layers1(obs["obs"].permute(0,3,1,2))
             x1 = torch.cat([x1, obs["phase"]], axis=1)
             values = self.layers2(x1)
         else:

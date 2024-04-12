@@ -1,12 +1,12 @@
 name: dqn
 buffer_size: 5000
-gamma: 0.99
-tau: 0.7
-target_update_frequency: 1
+gamma: 0.9
+tau: 1
+target_update_frequency: 10
 start_epsilon: 1.0
 min_epsilon: 0.01
 exploration_fraction: 0.5
 learning_starts: 1000
-train_frequency: 1
+train_frequency: 10
 loss_agg_window: 10
 

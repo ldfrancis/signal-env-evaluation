@@ -109,8 +109,8 @@ class ImageLikeLaneVehicleInfo(ObservationFunction):
     def observation_space(self):
         dict = {
             "obs":spaces.Box(
-                low=np.zeros((self._distance, len(self.ts.lanes), 2), dtype=np.float32),
-                high=np.ones((self._distance, len(self.ts.lanes), 2), dtype=np.float32)*10
+                low=np.zeros((self._distance, len(self.ts.lanes), 3), dtype=np.float32),
+                high=np.ones((self._distance, len(self.ts.lanes), 3), dtype=np.float32)*10
             ),
             "phase":spaces.Box(
                 low=np.zeros(self.ts.num_green_phases, dtype=np.float32),

@@ -47,6 +47,8 @@ class Trainer:
         if self._log_file:
             df = pd.DataFrame(self.results)
             df.to_csv(self._log_file, index=False)
+        else:
+            return pd.DataFrame(self.results)
 
     def save_agents(self, save_dir):
         for k,v in self._agents.items():
